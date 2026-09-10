@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Block Math Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0f9ff; /* Light blue background */
+            touch-action: manipulation; /* Optimize for touch, prevent double-tap zoom */
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+            overflow-y: auto; /* Allow vertical scrolling so buttons aren't hidden */
+        }
+
+        .lego-block {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s, opacity 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            margin: 8px;
+        }
+
+        .lego-block:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.4);
+        }
+
+        /* The bumps/studs on top of the block */
+        .lego-block::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            width: 15px;
+            height: 10px;
+            border-radius: 4px 4px 0 0;
+            background: inherit;
+            box-shadow: 25px 0 0 inherit;
+        }
+
+        /* Color variants */
+        .lego-red { background-color: #ef4444; }
+        .lego-blue { background-color: #3b82f6; }
+        .lego-green { background-color: #22c55e; }
+        .lego-yellow { background-color: #eab308; color: #854d0e; text-shadow: none;}
+
+        .smashed {
+            transform: scale(0) rotate(45deg);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .pop {
+            animation: popAnim 0.3s ease-out;
+        }
+
+        @keyframes popAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .shake {
+            animation: shakeAnim 0.4s ease-in-out;
+        }
+
+        .lego-ten-stick {
+            position: relative;
+            width: 60px;
+            height: 200px; /* Taller to represent 10 blocks */
+            border-radius: 8px;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s, opacity 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            margin: 8px;
+            background-image: repeating-linear-gradient(
+                to bottom,
+                transparent,
+                transparent 18px,
+                rgba(0,0,0,0.15) 19px,
+                rgba(0,0,0,0.15) 20px
+            ); /* Creates the illusion of stacked blocks */
+        }
+
+        .lego-ten-stick:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.4);
+        }
+        
+        .lego-ten-stick::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            width: 15px;
+            height: 10px;
+            border-radius: 4px 4px 0 0;
+            background: inherit;
+            box-shadow: 25px 0 0 inherit;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            pointer-events: none;
+            animation: explode 0.5s ease-out forwards;
+        }
+
+        @keyframes explode {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        /* Pro Themes */
+        .theme-space .lego-block, .theme-space .lego-ten-stick {
+            background-color: #1e1b4b !important;
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.6), inset 0 2px 0 rgba(255,255,255,0.2) !important;
+            border: 1px solid #8b5cf6;
+            color: #ddd6fe;
+        }
+        .theme-neon .lego-block, .theme-neon .lego-ten-stick {
+            background-color: #000 !important;
+            box-shadow: 0 0 10px var(--neon-color), inset 0 0 15px var(--neon-color) !important;
+            border: 2px solid var(--neon-color);
+            color: #fff;
+            text-shadow: 0 0 5px var(--neon-color);
+        }
+        .theme-neon.lego-red { --neon-color: #ff0055; }
+        .theme-neon.lego-blue { --neon-color: #00f3ff; }
+        .theme-neon.lego-green { --neon-color: #39ff14; }
+
+        @keyframes shakeAnim {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        /* Confetti Canvas */
+        #confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <!-- Confetti layer for celebrations -->
+    <canvas id="confetti"></canvas>
+
+    <header class="bg-white p-4 shadow-md flex justify-between items-center z-10">
+        <div class="flex items-center space-x-2">
+            <div class="bg-yellow-400 p-2 rounded-full shadow">
+                <svg class="w-6 h-6 text-yellow-800" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+            </div>
+            <span class="text-2xl font-bold text-gray-700">Streak: <span id="streak-counter" class="text-green-500">0</span></span>
+            
+            <div class="ml-4 bg-yellow-100 p-2 rounded-full shadow-inner flex items-center border border-yellow-300">
+                <span class="text-xl mr-1">🪙</span>
+                <span id="coin-counter" class="text-xl font-bold text-yellow-700">0</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <button id="btn-shop" class="p-2 rounded-full bg-purple-500 text-white font-bold shadow transition-colors text-sm hover:bg-purple-600 flex items-center">
+                🛍️ Shop
+            </button>
+            <div class="flex bg-gray-200 rounded-full p-1">
+                <button id="btn-add" class="px-6 py-2 rounded-full bg-blue-500 text-white font-bold shadow transition-colors text-lg">Addition (+)</button>
+                <button id="btn-sub" class="px-6 py-2 rounded-full text-gray-600 font-bold transition-colors text-lg">Subtraction (-)</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="w-full bg-white border-b flex justify-center p-2 space-x-2 z-10 shadow-sm">
+        <button id="btn-lvl-1" class="px-4 py-1 rounded-full bg-yellow-400 text-yellow-900 font-bold text-sm shadow-sm transition-colors border-2 border-yellow-500">Level 1 (Singles)</button>
+        <button id="btn-lvl-2" class="px-4 py-1 rounded-full bg-gray-100 text-gray-500 font-bold text-sm transition-colors border-2 border-transparent">Level 2 (Tens & Ones)</button>
+        <button id="btn-lvl-3" class="px-4 py-1 rounded-full bg-gray-100 text-gray-500 font-bold text-sm transition-colors border-2 border-transparent">Level 3 (Big Numbers)</button>
+    </div>
+
+    <main class="flex-1 flex flex-col items-center justify-start p-4 relative">
+        
+        <!-- Instruction / Encouragement Area -->
+        <div id="message-box" class="bg-white border-4 border-blue-400 rounded-2xl p-4 mt-4 shadow-lg max-w-2xl text-center w-full transform transition-all">
+            <h2 id="instruction-text" class="text-2xl md:text-3xl font-bold text-gray-800">
+                Let's build!
+            </h2>
+            <p id="sub-instruction" class="text-lg text-gray-500 mt-2 font-semibold">
+                Loading blocks...
+            </p>
+        </div>
+
+        <!-- The Abstract Equation (Numbers) -->
+        <div class="mt-8 text-5xl md:text-7xl font-black text-gray-700 flex items-center space-x-4">
+            <span id="eq-num1">?</span>
+            <span id="eq-op" class="text-blue-500">+</span>
+            <span id="eq-num2">?</span>
+            <span class="text-gray-400">=</span>
+            <span id="eq-answer" class="text-gray-300 border-b-4 border-dashed border-gray-300 pb-2 min-w-[60px] text-center">?</span>
+        </div>
+
+        <!-- The Concrete/Pictorial Area (Blocks) -->
+        <div id="block-arena" class="mt-8 flex-1 w-full max-w-3xl flex justify-center items-center flex-wrap content-start">
+            <!-- Blocks will be injected here by JS -->
+        </div>
+
+        <!-- Multiple Choice Answers (Abstract Stage) -->
+        <div id="answer-options" class="mb-8 pb-12 w-full max-w-2xl grid grid-cols-3 gap-4 opacity-0 pointer-events-none transition-opacity duration-500">
+            <!-- Buttons injected here -->
+        </div>
+
+    </main>
+
+    <!-- Custom Alert/Modal for hints -->
+    <div id="hint-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+        <div class="bg-white rounded-3xl p-8 max-w-sm text-center shadow-2xl transform scale-95 transition-transform">
+            <div class="text-6xl mb-4">🤔</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Not quite!</h3>
+            <p id="hint-text" class="text-lg text-gray-600 mb-6">Let's try counting the blocks one by one.</p>
+            <button id="close-hint" class="bg-blue-500 text-white font-bold text-xl py-3 px-8 rounded-full shadow-lg active:translate-y-1">Try Again</button>
+        </div>
+    </div>
+
+    <div id="shop-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+        <div class="bg-white rounded-3xl p-8 max-w-md text-center shadow-2xl w-full mx-4">
+            <h2 class="text-3xl font-black text-purple-600 mb-2">Block Shop</h2>
+            <p class="text-gray-500 mb-6">Spend your coins on cool new blocks!</p>
+            
+            <div class="grid grid-cols-1 gap-4 mb-6">
+                <div class="border-2 border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50" onclick="selectTheme('classic')">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-blue-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-inner">1</div>
+                        <span class="font-bold text-lg text-gray-700">Classic Blocks</span>
+                    </div>
+                    <span class="text-green-500 font-bold">Owned ✓</span>
+                </div>
+                
+                <div class="border-2 border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50" onclick="buyTheme('space', 50)">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-indigo-900 border border-purple-400 rounded flex items-center justify-center text-purple-200 font-bold text-xs shadow-lg">1</div>
+                        <span class="font-bold text-lg text-gray-700">Deep Space</span>
+                    </div>
+                    <button id="btn-buy-space" class="bg-yellow-400 text-yellow-900 font-bold px-3 py-1 rounded-full shadow-sm">50 🪙</button>
+                </div>
+
+                <div class="border-2 border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50" onclick="buyTheme('neon', 100)">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-black border-2 border-pink-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg" style="box-shadow: 0 0 10px #ff0055 inset">1</div>
+                        <span class="font-bold text-lg text-gray-700">Cyber Neon</span>
+                    </div>
+                    <button id="btn-buy-neon" class="bg-yellow-400 text-yellow-900 font-bold px-3 py-1 rounded-full shadow-sm">100 🪙</button>
+                </div>
+            </div>
+            
+            <button id="close-shop" class="bg-gray-200 text-gray-700 font-bold text-lg py-2 px-8 rounded-full shadow active:translate-y-1">Close Shop</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let state = {
+            mode: 'add', // 'add' or 'sub'
+            level: 1,    // 1, 2, or 3
+            num1: 0,
+            num2: 0,
+            correctAnswer: 0,
+            streak: 0,
+            coins: 0,    // NEW: Currency system
+            theme: 'classic', // NEW: Theming system
+            unlockedThemes: ['classic'],
+            blocksToSmash: 0,
+            smashedCount: 0,
+            countedCount: 0, // Total value counted
+            itemsToCount: 0, // Number of physical DOM elements to tap
+            itemsCounted: 0, // How many physical DOM elements tapped
+            phase: 'interact' // 'interact' or 'answer'
+        };
+
+        // DOM Elements
+        const elInstruction = document.getElementById('instruction-text');
+        const elSubInstruction = document.getElementById('sub-instruction');
+        const elArena = document.getElementById('block-arena');
+        const elOptions = document.getElementById('answer-options');
+        const elNum1 = document.getElementById('eq-num1');
+        const elNum2 = document.getElementById('eq-num2');
+        const elOp = document.getElementById('eq-op');
+        const elAnswer = document.getElementById('eq-answer');
+        const elStreak = document.getElementById('streak-counter');
+        const elCoins = document.getElementById('coin-counter'); // NEW
+        const btnAdd = document.getElementById('btn-add');
+        const btnSub = document.getElementById('btn-sub');
+        const btnShop = document.getElementById('btn-shop'); // NEW
+        const hintModal = document.getElementById('hint-modal');
+        const shopModal = document.getElementById('shop-modal'); // NEW
+        const closeHintBtn = document.getElementById('close-hint');
+        const closeShopBtn = document.getElementById('close-shop'); // NEW
+        const messageBox = document.getElementById('message-box');
+        
+        const btnLvl1 = document.getElementById('btn-lvl-1');
+        const btnLvl2 = document.getElementById('btn-lvl-2');
+        const btnLvl3 = document.getElementById('btn-lvl-3');
+
+        btnAdd.addEventListener('click', () => setMode('add'));
+        btnSub.addEventListener('click', () => setMode('sub'));
+        closeHintBtn.addEventListener('click', () => hintModal.classList.replace('flex', 'hidden'));
+        
+        btnShop.addEventListener('click', () => shopModal.classList.replace('hidden', 'flex'));
+        closeShopBtn.addEventListener('click', () => shopModal.classList.replace('flex', 'hidden'));
+
+        btnLvl1.addEventListener('click', () => setLevel(1));
+        btnLvl2.addEventListener('click', () => setLevel(2));
+        btnLvl3.addEventListener('click', () => setLevel(3));
+
+        function setLevel(lvl) {
+            state.level = lvl;
+            playSound('blip'); // Audio feedback
+            
+            // Reset button styles
+            [btnLvl1, btnLvl2, btnLvl3].forEach(btn => {
+                btn.className = "px-4 py-1 rounded-full bg-gray-100 text-gray-500 font-bold text-sm transition-colors border-2 border-transparent";
+            });
+
+            // Activate selected button
+            const activeBtn = lvl === 1 ? btnLvl1 : lvl === 2 ? btnLvl2 : btnLvl3;
+            activeBtn.className = "px-4 py-1 rounded-full bg-yellow-400 text-yellow-900 font-bold text-sm shadow-sm transition-colors border-2 border-yellow-500";
+            
+            state.streak = 0; // Reset streak on level change
+            elStreak.innerText = state.streak;
+            generateProblem();
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            playSound('blip');
+            if (mode === 'add') {
+                btnAdd.className = "px-6 py-2 rounded-full bg-blue-500 text-white font-bold shadow transition-colors text-lg";
+                btnSub.className = "px-6 py-2 rounded-full text-gray-600 font-bold transition-colors text-lg hover:bg-gray-300";
+            } else {
+                btnSub.className = "px-6 py-2 rounded-full bg-red-500 text-white font-bold shadow transition-colors text-lg";
+                btnAdd.className = "px-6 py-2 rounded-full text-gray-600 font-bold transition-colors text-lg hover:bg-gray-300";
+            }
+            generateProblem();
+        }
+
+        function generateProblem() {
+            if (state.mode === 'add') {
+                if (state.level === 1) {
+                    // Level 1: Singles (1-5)
+                    state.num1 = Math.floor(Math.random() * 5) + 1; 
+                    state.num2 = Math.floor(Math.random() * 5) + 1; 
+                } else if (state.level === 2) {
+                    // Level 2: Tens and Ones Intro (e.g. 10 + 4, 20 + 3)
+                    let tens = (Math.floor(Math.random() * 2) + 1) * 10; // 10 or 20
+                    let ones = Math.floor(Math.random() * 9) + 1; // 1 to 9
+                    
+                    // Randomize which one is first
+                    if (Math.random() > 0.5) {
+                        state.num1 = tens;
+                        state.num2 = ones;
+                    } else {
+                        state.num1 = ones;
+                        state.num2 = tens;
+                    }
+                } else {
+                    // Level 3: Big Numbers without regrouping (e.g. 23 + 14)
+                    let tens1 = (Math.floor(Math.random() * 3) + 1) * 10; // 10, 20, 30
+                    let ones1 = Math.floor(Math.random() * 4) + 1; // 1 to 4
+                    let tens2 = (Math.floor(Math.random() * 2) + 1) * 10; // 10, 20
+                    let ones2 = Math.floor(Math.random() * 4) + 1; // 1 to 4
+                    
+                    state.num1 = tens1 + ones1;
+                    state.num2 = tens2 + ones2;
+                }
+                
+                state.correctAnswer = state.num1 + state.num2;
+                elOp.innerText = '+';
+                elOp.className = 'text-blue-500';
+            } else {
+                // Subtraction Logic
+                if (state.level === 1) {
+                    state.num1 = Math.floor(Math.random() * 6) + 4; // 4 to 9
+                    state.num2 = Math.floor(Math.random() * (state.num1 - 1)) + 1; 
+                } else if (state.level === 2) {
+                    // e.g. 15 - 3, 24 - 4
+                    let tens = (Math.floor(Math.random() * 2) + 1) * 10; // 10 or 20
+                    let ones = Math.floor(Math.random() * 6) + 3; // 3 to 8
+                    state.num1 = tens + ones;
+                    state.num2 = Math.floor(Math.random() * (ones - 1)) + 1; // Take away only ones
+                } else {
+                    // e.g. 35 - 12 (No regrouping needed)
+                    let tens1 = (Math.floor(Math.random() * 3) + 2) * 10; // 20, 30, 40
+                    let ones1 = Math.floor(Math.random() * 4) + 5; // 5 to 8
+                    let tens2 = (Math.floor(Math.random() * (tens1/10 - 1)) + 1) * 10; // smaller tens
+                    let ones2 = Math.floor(Math.random() * (ones1 - 1)) + 1; // smaller ones
+                    
+                    state.num1 = tens1 + ones1;
+                    state.num2 = tens2 + ones2;
+                }
+
+                state.correctAnswer = state.num1 - state.num2;
+                elOp.innerText = '-';
+                elOp.className = 'text-red-500';
+            }
+
+            state.smashedCount = 0; // Value smashed
+            state.countedCount = 0; // Value counted
+            state.itemsCounted = 0; // Physical items tapped
+            
+            // Apply current theme to arena
+            elArena.className = `mt-8 flex-1 w-full max-w-3xl flex justify-center items-center flex-wrap content-start theme-${state.theme}`;
+
+            // Calculate how many physical DOM elements need tapping
+            if (state.mode === 'add') {
+                let n1Tens = Math.floor(state.num1 / 10);
+                let n1Ones = state.num1 % 10;
+                let n2Tens = Math.floor(state.num2 / 10);
+                let n2Ones = state.num2 % 10;
+                state.itemsToCount = n1Tens + n1Ones + n2Tens + n2Ones;
+                state.blocksToSmash = 0;
+            } else {
+                state.itemsToCount = 0;
+                // For subtraction, we smash exact value. 
+                // We'll calculate DOM elements inside the block generation
+                state.blocksToSmash = state.num2; 
+            }
+
+            state.phase = 'interact';
+
+            updateUI();
+            renderBlocks();
+            generateAnswerOptions();
+        }
+
+        function updateUI() {
+            elNum1.innerText = state.num1;
+            elNum2.innerText = state.num2;
+            elAnswer.innerText = '?';
+            elAnswer.className = "text-gray-300 border-b-4 border-dashed border-gray-300 pb-2 min-w-[60px] text-center";
+            
+            // Hide answers initially during the "Concrete" interact phase
+            elOptions.classList.add('opacity-0', 'pointer-events-none');
+            
+            if (state.mode === 'add') {
+                elInstruction.innerHTML = `Let's add <span class="text-red-500">${state.num1}</span> and <span class="text-blue-500">${state.num2}</span>!`;
+                elSubInstruction.innerText = "Tap all the blocks to count them.";
+                messageBox.className = "bg-white border-4 border-blue-400 rounded-2xl p-4 mt-4 shadow-lg max-w-2xl text-center w-full transform transition-all";
+            } else {
+                elInstruction.innerHTML = `You have <span class="text-green-500">${state.num1}</span> blocks. Smash <span class="text-red-500">${state.num2}</span>!`;
+                elSubInstruction.innerText = `Tap ${state.num2} blocks to smash them.`;
+                messageBox.className = "bg-white border-4 border-red-400 rounded-2xl p-4 mt-4 shadow-lg max-w-2xl text-center w-full transform transition-all";
+            }
+        }
+
+        function renderBlocks() {
+            elArena.innerHTML = '';
+            
+            if (state.mode === 'add') {
+                // Render Group 1 (Red)
+                const group1 = document.createElement('div');
+                group1.className = "flex flex-wrap justify-center m-4 bg-red-50 p-4 rounded-xl border-2 border-red-100 max-w-sm";
+                buildNumberBlocks(state.num1, 'lego-red', 'add', group1);
+                
+                // Render Group 2 (Blue)
+                const group2 = document.createElement('div');
+                group2.className = "flex flex-wrap justify-center m-4 bg-blue-50 p-4 rounded-xl border-2 border-blue-100 max-w-sm";
+                buildNumberBlocks(state.num2, 'lego-blue', 'add', group2);
+                
+                elArena.appendChild(group1);
+                elArena.appendChild(group2);
+            } else {
+                // Render 1 Big Group for Subtraction (Green)
+                const group = document.createElement('div');
+                group.className = "flex flex-wrap justify-center m-4 p-4 max-w-xl bg-green-50 rounded-xl border-2 border-green-100";
+                
+                // Calculate physical dom items we are allowed to smash
+                // We prioritize smashing ones first, then tens if needed.
+                let itemsAllowedToSmash = 0;
+                let t = Math.floor(state.num2 / 10);
+                let o = state.num2 % 10;
+                itemsAllowedToSmash = t + o;
+                
+                // Hacky way to store this for the click handler
+                state.domItemsToSmash = itemsAllowedToSmash; 
+                state.domItemsSmashed = 0;
+
+                buildNumberBlocks(state.num1, 'lego-green', 'sub', group);
+                elArena.appendChild(group);
+            }
+        }
+
+        // Helper function to build Tens and Ones
+        function buildNumberBlocks(number, colorClass, type, container) {
+            let tens = Math.floor(number / 10);
+            let ones = number % 10;
+
+            // Add Ten-Sticks
+            for(let i=0; i<tens; i++) {
+                container.appendChild(createBlock(colorClass, type, 10));
+            }
+            // Add Single Blocks
+            for(let i=0; i<ones; i++) {
+                container.appendChild(createBlock(colorClass, type, 1));
+            }
+        }
+
+        function createBlock(colorClass, type, value) {
+            const block = document.createElement('div');
+            // Assign class based on value
+            let shapeClass = value === 10 ? 'lego-ten-stick' : 'lego-block';
+            block.className = `${shapeClass} ${colorClass}`;
+            
+            block.addEventListener('click', function(e) {
+                // Initialize audio context on first user interaction to comply with browser policies
+                if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+                if (type === 'add') {
+                    // Tactile counting
+                    if (!this.classList.contains('counted')) {
+                        playSound('pop'); // Play pop sound
+                        state.countedCount += value; // Add 1 or 10
+                        state.itemsCounted++; // Track physical taps
+                        
+                        this.innerText = state.countedCount; // Show running total
+                        this.classList.add('counted', 'pop');
+                        this.style.opacity = '0.9';
+                        
+                        if (value === 10) {
+                            this.style.backgroundColor = '#475569'; // Turn grey to show it's "used"
+                        }
+                        
+                        // Check if done counting
+                        if (state.itemsCounted === state.itemsToCount) {
+                            progressToAbstract();
+                        }
+                    }
+                } else if (type === 'sub') {
+                    // Tactile smashing
+                    // We only allow smashing if we haven't reached our smash limit
+                    if (!this.classList.contains('smashed') && state.domItemsSmashed < state.domItemsToSmash) {
+                        
+                        // Check if we are trying to smash a 10, but only need ones
+                        if(value === 10 && (state.blocksToSmash - state.smashedCount) < 10) {
+                            // Don't smash 10s if we only need ones
+                            playSound('error');
+                            this.classList.add('shake');
+                            setTimeout(() => this.classList.remove('shake'), 400);
+                            return; 
+                        }
+
+                        playSound('smash'); // Play breaking sound
+                        createParticles(e.clientX, e.clientY, colorClass); // Trigger explosion VFX
+
+                        this.classList.add('smashed');
+                        state.smashedCount += value;
+                        state.domItemsSmashed++;
+                        
+                        let remaining = state.blocksToSmash - state.smashedCount;
+                        elSubInstruction.innerText = `${remaining} value left to smash!`;
+                        
+                        if (state.smashedCount === state.blocksToSmash) {
+                            progressToAbstract();
+                        }
+                    }
+                }
+            });
+            return block;
+        }
+
+        function progressToAbstract() {
+            state.phase = 'answer';
+            elOptions.classList.remove('opacity-0', 'pointer-events-none');
+            
+            if (state.mode === 'add') {
+                elInstruction.innerText = "Great counting!";
+                elSubInstruction.innerText = "Now, pick the correct number below.";
+            } else {
+                elInstruction.innerText = "Awesome smashing!";
+                elSubInstruction.innerText = "How many blocks survived? Count them and pick!";
+            }
+            
+            // Highlight the equation area to draw attention
+            elAnswer.classList.add('pop');
+
+            // Scroll down smoothly so the buttons are visible on smaller screens
+            setTimeout(() => {
+                elOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function generateAnswerOptions() {
+            elOptions.innerHTML = '';
+            
+            // Generate 3 unique options including the correct answer
+            let options = new Set();
+            options.add(state.correctAnswer);
+            
+            while(options.size < 3) {
+                // Generate plausible wrong answers
+                let offset = Math.floor(Math.random() * 3) + 1;
+                let isPlus = Math.random() > 0.5;
+                let wrong = isPlus ? state.correctAnswer + offset : state.correctAnswer - offset;
+                if (wrong >= 0) options.add(wrong);
+            }
+            
+            // Shuffle
+            let shuffled = Array.from(options).sort(() => Math.random() - 0.5);
+            
+            shuffled.forEach(num => {
+                const btn = document.createElement('button');
+                btn.className = "bg-white border-b-4 border-gray-300 text-gray-700 hover:bg-gray-50 text-4xl font-black py-6 rounded-2xl shadow-sm active:border-b-0 active:translate-y-1 transition-all";
+                btn.innerText = num;
+                btn.onclick = () => checkAnswer(num, btn);
+                elOptions.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedNumber, buttonElement) {
+            if (state.phase !== 'answer') return; // Prevent clicking before interaction is done
+
+            if (selectedNumber === state.correctAnswer) {
+                // Win!
+                playSound('win');
+                state.streak++;
+                
+                // Reward coins based on level
+                let earnedCoins = state.level * 5;
+                state.coins += earnedCoins;
+                
+                elStreak.innerText = state.streak;
+                elCoins.innerText = state.coins;
+                
+                // Update Abstract Equation visually
+                elAnswer.innerText = state.correctAnswer;
+                elAnswer.className = "text-green-500 border-none pb-0";
+                
+                buttonElement.classList.replace('bg-white', 'bg-green-400');
+                buttonElement.classList.replace('text-gray-700', 'text-white');
+                buttonElement.classList.replace('border-gray-300', 'border-green-600');
+                
+                elInstruction.innerText = "You got it! 🎉";
+                elSubInstruction.innerText = "Brilliant job!";
+                
+                fireConfetti();
+                
+                // Wait, then next level (Micro-missions pacing)
+                setTimeout(() => {
+                    generateProblem();
+                }, 2500);
+
+            } else {
+                // Scaffolded Error Correction (Praise process, gently correct)
+                playSound('error');
+                buttonElement.classList.add('shake', 'bg-red-100');
+                setTimeout(() => buttonElement.classList.remove('shake'), 400);
+                
+                document.getElementById('hint-text').innerText = state.mode === 'add' 
+                    ? "Let's touch the blocks on the screen to count them together."
+                    : "Let's count the green blocks that are still left standing.";
+                
+                hintModal.classList.replace('hidden', 'flex');
+                state.streak = 0;
+                elStreak.innerText = state.streak;
+            }
+        }
+
+        const canvas = document.getElementById('confetti');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function fireConfetti() {
+            const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308'];
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 1) * 20 - 5,
+                    size: Math.random() * 10 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 1
+                });
+            }
+            if(particles.length <= 100) animateConfetti();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.5; // gravity
+                p.life -= 0.01;
+            }
+            particles = particles.filter(p => p.life > 0);
+            if (particles.length > 0) {
+                requestAnimationFrame(animateConfetti);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // 1. Audio Engine (Web Audio API - No external files needed)
+        let audioCtx = null;
+
+        // iPad/iOS requires audio to be initialized during a direct user interaction
+        function initAudio() {
+            if (!audioCtx) {
+                try { 
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext(); 
+                } catch(e) { console.warn("Web audio not supported."); }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Listen for any tap or click to unlock the audio globally
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('mousedown', initAudio, { once: true });
+
+        function playSound(type) {
+            initAudio(); // Ensure it's initialized and active
+            if (!audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            
+            if (type === 'pop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400 + (state.itemsCounted * 50), now); // Pitch goes up as they count!
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'smash') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554, now + 0.1); // Major third jump
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'blip') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            } else if (type === 'error') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.setValueAtTime(150, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+        }
+
+        // 2. Particle System for "Smashing"
+        function createParticles(x, y, colorClass) {
+            let baseColor = '#22c55e'; // default green
+            if(state.theme === 'neon') baseColor = '#39ff14';
+            
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.backgroundColor = baseColor;
+                particle.style.left = (x - 5) + 'px';
+                particle.style.top = (y - 5) + 'px';
+                
+                // Random explosion angles
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 30 + Math.random() * 50;
+                particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 500);
+            }
+        }
+
+        // 3. Shop & Theme Logic
+        function buyTheme(themeName, cost) {
+            if (state.unlockedThemes.includes(themeName)) {
+                selectTheme(themeName);
+                return;
+            }
+            
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                elCoins.innerText = state.coins;
+                state.unlockedThemes.push(themeName);
+                playSound('win');
+                
+                // Update UI button to show owned
+                const btn = document.getElementById(`btn-buy-${themeName}`);
+                btn.innerText = "Owned ✓";
+                btn.className = "text-green-500 font-bold px-3 py-1";
+                
+                selectTheme(themeName);
+            } else {
+                playSound('error');
+                const btn = document.getElementById(`btn-buy-${themeName}`);
+                btn.classList.add('shake');
+                setTimeout(() => btn.classList.remove('shake'), 400);
+            }
+        }
+
+        function selectTheme(themeName) {
+            if (state.unlockedThemes.includes(themeName)) {
+                state.theme = themeName;
+                playSound('blip');
+                generateProblem(); // Rerender blocks with new theme
+                shopModal.classList.replace('flex', 'hidden');
+            }
+        }
+
+        // Initialize Game
+        window.onload = () => {
+            setMode('add');
+        };
+
+    </script>
+</body>
+</html>
+
